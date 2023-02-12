@@ -1,8 +1,5 @@
 <?php
-
 namespace Illuminate\View\Compilers\Concerns;
-
-use Illuminate\View\Factory as ViewFactory;
 
 trait CompilesLayouts
 {
@@ -50,7 +47,9 @@ trait CompilesLayouts
      */
     protected function compileParent()
     {
-        return ViewFactory::parentPlaceholder($this->lastSection ?: '');
+        $escapedLastSection = strtr($this->lastSection, ['\\' => '\\\\', "'" => "\\'"]);
+
+        return "<?php echo \Illuminate\View\Factory::parentPlaceholder('{$escapedLastSection}'); ?>";
     }
 
     /**
