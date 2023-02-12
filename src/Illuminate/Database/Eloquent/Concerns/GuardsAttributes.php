@@ -1,5 +1,4 @@
 <?php
-
 namespace Illuminate\Database\Eloquent\Concerns;
 
 use Illuminate\Support\Str;
@@ -26,6 +25,13 @@ trait GuardsAttributes
      * @var bool
      */
     protected static $unguarded = false;
+
+    /**
+     * The actual columns that exist on the database and can be guarded.
+     *
+     * @var array
+     */
+    protected static $guardableColumns = [];
 
     /**
      * Get the fillable attributes for the model.
@@ -152,18 +158,35 @@ trait GuardsAttributes
         }
 
         return empty($this->getFillable()) &&
-            ! Str::startsWith($key, '_');
+            !Str::startsWith($key, '_');
+    }
+
+    public function isGuarded($key)
+    {
+        if (empty($this->getGuarded())) {
+            return false;
+        }
+
+        return $this->getGuarded() == ['*'] ||
+            !empty(preg_grep('/^' . preg_quote($key) . '$/i', $this->getGuarded())) ||
+            !$this->isGuardableColumn($key);
     }
 
     /**
-     * Determine if the given key is guarded.
+     * Determine if the given column is a valid, guardable column.
      *
      * @param  string  $key
      * @return bool
      */
-    public function isGuarded($key)
+    protected function isGuardableColumn($key)
     {
-        return in_array($key, $this->getGuarded()) || $this->getGuarded() == ['*'];
+        if (!isset(static::$guardableColumns[get_class($this)])) {
+            static::$guardableColumns[get_class($this)] = $this->getConnection()
+                        ->getSchemaBuilder()
+                        ->getColumnListing($this->getTable());
+        }
+
+        return in_array($key, static::$guardableColumns[get_class($this)]);
     }
 
     /**
@@ -184,7 +207,7 @@ trait GuardsAttributes
      */
     protected function fillableFromArray(array $attributes)
     {
-        if (count($this->getFillable()) > 0 && ! static::$unguarded) {
+        if (count($this->getFillable()) > 0 && !static::$unguarded) {
             return array_intersect_key($attributes, array_flip($this->getFillable()));
         }
 
