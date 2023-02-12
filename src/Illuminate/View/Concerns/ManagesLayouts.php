@@ -1,9 +1,9 @@
 <?php
-
 namespace Illuminate\View\Concerns;
 
 use InvalidArgumentException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Str;
 
 trait ManagesLayouts
 {
@@ -27,6 +27,13 @@ trait ManagesLayouts
      * @var mixed
      */
     protected static $parentPlaceholder = [];
+
+    /**
+     * The parent placeholder salt for the request.
+     *
+     * @var string
+     */
+    protected static $parentPlaceholderSalt;
 
     /**
      * Start injecting content into a section.
@@ -155,7 +162,9 @@ trait ManagesLayouts
         $sectionContent = str_replace('@@parent', '--parent--holder--', $sectionContent);
 
         return str_replace(
-            '--parent--holder--', '@parent', str_replace(static::parentPlaceholder($section), '', $sectionContent)
+            '--parent--holder--',
+            '@parent',
+            str_replace(static::parentPlaceholder($section), '', $sectionContent)
         );
     }
 
@@ -167,11 +176,26 @@ trait ManagesLayouts
      */
     public static function parentPlaceholder($section = '')
     {
-        if (! isset(static::$parentPlaceholder[$section])) {
-            static::$parentPlaceholder[$section] = '##parent-placeholder-'.sha1($section).'##';
+        if (!isset(static::$parentPlaceholder[$section])) {
+            $salt = static::parentPlaceholderSalt();
+            static::$parentPlaceholder[$section] = '##parent-placeholder-' . sha1($salt . $section) . '##';
         }
 
         return static::$parentPlaceholder[$section];
+    }
+
+      /**
+     * Get the parent placeholder salt.
+     *
+     * @return string
+     */
+    protected static function parentPlaceholderSalt()
+    {
+        if (!static::$parentPlaceholderSalt) {
+            return static::$parentPlaceholderSalt = Str::random(40);
+        }
+
+        return static::$parentPlaceholderSalt;
     }
 
     /**
